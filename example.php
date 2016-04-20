@@ -13,11 +13,11 @@ $arrImages = array(
 	'background' => array(
 		'originpath' => 'origin/',
 		'file' => 'bg.jpg',
-		'alpha' => 45,
+		'alpha' => 55,
 		'ratio' => 72/25.4,
 	),
 	'images' => array(
-		'cols' => 10,
+		'cols' => 15,
 		'rows' => 15,
 		'alpha' => 55,
 		'ratio' => 72/25.4,
