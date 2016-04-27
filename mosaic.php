@@ -10,6 +10,31 @@ class Mosaic extends FPDF
 {
 	var $extgstates;
 	var $format = array('$w','$h');
+	
+	private $folders_config = array(
+			'pdf' => 'origin/temp/example.pdf',
+			'temppath' => 'origin/temp/',
+			'background' => array(
+				'originpath' => 'origin/',
+				'file' => 'bg.jpg',
+				'alpha' => 55,
+				'ratio' => 2.834,
+			),
+			'images' => array(
+				'cols' => 15,
+				'rows' => 15,
+				'alpha' => 55,
+				'ratio' => 2.834,
+				'originpath' => 'origin/images/',
+				'files' => array(
+					'1.jpg',
+					'2.jpg',
+					'3.jpg',
+					'4.jpg',
+					'5.jpg',
+				)
+			),
+		);
 
 	function Mosaic($orientation='P',$unit='mm',$format='A4')
 	{
@@ -73,6 +98,75 @@ class Mosaic extends FPDF
 		if (!empty($this->javascript)) {
 			$this->_putjavascript();
 		}
+	}
+	
+	function setConfig($settings) {
+		$this->folders_config = $settings;
+	}
+	
+	function checkFolder() {
+		if (!file_exists($this->folders_config['temppath'])) {
+			mkdir($this->folders_config['temppath'], 0777, true);
+		}
+	}
+	
+	function createMosaic() {
+		// initialize X and Y 
+		$xOrd=0;
+		$yOrd=0;
+
+		// if background image exists create pdf
+		if(is_file($this->folders_config['background']['originpath'].$this->folders_config['background']['file'])) {
+			// verify if temp folder exists
+			$this->checkFolder();
+			
+			// get background image size
+			$size = @getimagesize($this->folders_config['background']['originpath'].$this->folders_config['background']['file']);
+			$wBg = $size[0];
+			$hBg = $size[1];
+			
+			// define width and height of each image of mosaic 
+			$wPic= round($this->w/$this->folders_config['images']['cols'],6); 
+			$hPic= round($this->h/$this->folders_config['images']['rows'],6); 
+			
+			$xIni = 0; 
+			
+			// define alpha for all images of mosaic
+			$this->SetAlpha($this->folders_config['images']['alpha']/100);
+			
+			// get the images quantity
+			$qImages = ($this->folders_config['images']['cols']*$this->folders_config['images']['rows']);
+			
+			// loop to create images
+			for($i=0;$i<$qImages;$i++) {
+				
+				if($xOrd > $this->folders_config['images']['cols']-1) { 
+					$xOrd = 0;
+					$yOrd += 1;
+				}
+				// if quantity of images defined are less than that you need to create mosaic repeat some of them randomically
+				if(count($this->folders_config['images']['files']) < $qImages) {
+					$rand_num = rand(0,count($this->folders_config['images']['files'])-1);
+					$pic = $this->folders_config['images']['files'][$rand_num];
+				} else {
+					$pic = $this->folders_config['images']['files'][$i];
+				}
+				// if file exists crop it and create a new one to add to pdf
+				if(is_file($this->folders_config['images']['originpath'].$pic)) {
+					$this->put_crop_img(($xIni+($wPic*$xOrd)),(0+($hPic*$yOrd)),$pic,$this->folders_config['images']['originpath'],$this->folders_config['temppath'],'small',$wPic*$this->folders_config['images']['ratio'],$hPic*$this->folders_config['images']['ratio'],$this->folders_config['images']['ratio']);
+				}
+				$xOrd ++;
+			}
+			
+			// define alpha for background
+			$this->SetAlpha($this->folders_config['background']['alpha']/100);
+			// crop background and add to pdf
+			$this->put_crop_img($xIni,0,$this->folders_config['background']['file'],$this->folders_config['background']['originpath'],$this->folders_config['temppath'],'big',$this->w*$this->folders_config['background']['ratio'],$this->h*$this->folders_config['background']['ratio'],$this->folders_config['background']['ratio']);
+			$this->SetAlpha(1);
+			// save pdf
+			$this->Output($this->folders_config['pdf']); 
+		}
+
 	}
 
 	// crop image and add to pdf file
